@@ -36,8 +36,8 @@ export const SearchFilters = ({ selectedCategory, onCategoryChange }: SearchFilt
                   variant={selectedCategory === category.id ? "default" : "outline"}
                   className={`cursor-pointer transition-colors ${
                     selectedCategory === category.id 
-                      ? "bg-purple-600 hover:bg-purple-700" 
-                      : "hover:bg-purple-50"
+                      ? "bg-green-600 hover:bg-green-700" 
+                      : "hover:bg-green-50"
                   }`}
                   onClick={() => onCategoryChange(category.id)}
                 >
@@ -73,10 +73,10 @@ export const SearchFilters = ({ selectedCategory, onCategoryChange }: SearchFilt
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any-location">Any Location</SelectItem>
-                  <SelectItem value="new-york">New York</SelectItem>
-                  <SelectItem value="los-angeles">Los Angeles</SelectItem>
-                  <SelectItem value="chicago">Chicago</SelectItem>
-                  <SelectItem value="miami">Miami</SelectItem>
+                  <SelectItem value="nairobi">Nairobi</SelectItem>
+                  <SelectItem value="mombasa">Mombasa</SelectItem>
+                  <SelectItem value="kisumu">Kisumu</SelectItem>
+                  <SelectItem value="nakuru">Nakuru</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -89,15 +89,15 @@ export const SearchFilters = ({ selectedCategory, onCategoryChange }: SearchFilt
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any-price">Any Price</SelectItem>
-                  <SelectItem value="under-50">Under $50</SelectItem>
-                  <SelectItem value="50-100">$50 - $100</SelectItem>
-                  <SelectItem value="100-200">$100 - $200</SelectItem>
-                  <SelectItem value="over-200">Over $200</SelectItem>
+                  <SelectItem value="under-2000">Under KES 2,000</SelectItem>
+                  <SelectItem value="2000-4000">KES 2,000 - 4,000</SelectItem>
+                  <SelectItem value="4000-8000">KES 4,000 - 8,000</SelectItem>
+                  <SelectItem value="over-8000">Over KES 8,000</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <Button variant="outline">
+            <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
               <Filter className="h-4 w-4 mr-2" />
               More Filters
             </Button>

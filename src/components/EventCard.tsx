@@ -40,6 +40,15 @@ export const EventCard = ({ event }: EventCardProps) => {
     return count.toString();
   };
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
       <div className="relative">
@@ -48,7 +57,7 @@ export const EventCard = ({ event }: EventCardProps) => {
           alt={event.title}
           className="w-full h-48 object-cover"
         />
-        <Badge className="absolute top-3 left-3 bg-purple-600">
+        <Badge className="absolute top-3 left-3 bg-green-600">
           {event.category}
         </Badge>
         <div className="absolute top-3 right-3 bg-black/50 text-white px-2 py-1 rounded-md text-sm flex items-center">
@@ -59,7 +68,7 @@ export const EventCard = ({ event }: EventCardProps) => {
       
       <CardHeader className="pb-3">
         <CardTitle className="text-lg line-clamp-1">{event.title}</CardTitle>
-        <CardDescription className="text-purple-600 font-medium">
+        <CardDescription className="text-green-600 font-medium">
           {event.artist}
         </CardDescription>
       </CardHeader>
@@ -82,10 +91,10 @@ export const EventCard = ({ event }: EventCardProps) => {
         
         <div className="flex items-center justify-between pt-4">
           <div>
-            <span className="text-2xl font-bold text-gray-900">${event.price}</span>
+            <span className="text-2xl font-bold text-gray-900">{formatPrice(event.price)}</span>
             <span className="text-gray-600 ml-1">per ticket</span>
           </div>
-          <Button className="bg-purple-600 hover:bg-purple-700">
+          <Button className="bg-green-600 hover:bg-green-700">
             Book Now
           </Button>
         </div>
