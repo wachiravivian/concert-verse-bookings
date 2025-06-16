@@ -1,258 +1,264 @@
-
-import { useState } from "react";
+// src/pages/Index.tsx
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom"; // Assuming you are using react-router-dom for navigation
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Search, Calendar, MapPin, Users, Music, Star } from "lucide-react";
-import { EventCard } from "@/components/EventCard";
-import { SearchFilters } from "@/components/SearchFilters";
+import EventCard from '@/components/EventCard'; // If you've configured path aliases like 
+import { SearchFilters } from "@/components/SearchFilters"; // Assuming this component exists
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu, Search } from "lucide-react"; // Assuming Menu and Search are from lucide-react
+import { useToast } from "@/components/ui/use-toast"; // Assuming shadcn/ui toast setup
+
+// --- IMPORTANT: Updated Event Interface to match Database Schema ---
+interface Event {
+    eventId: number;      // Matches 'eventId' in DB
+    name: string;         // Matches 'name' in DB
+    description: string;  // Matches 'description' in DB
+    eventDate: string;    // Matches 'eventDate' in DB
+    venue: string;        // Matches 'venue' in DB
+    ticketPrice: number;  // Matches 'ticketPrice' in DB
+    dateCreated: string;  // Matches 'dateCreated' in DB
+    lastUpdated: string;  // Matches 'lastUpdated' in DB
+
+    // These fields are NOT in your provided DB schema and thus won't be fetched.
+    // If you need them, you must add them to your MySQL 'Event' table.
+    // For now, I'm commenting them out or removing them from filtering logic.
+    // artist?: string;
+    // time?: string; // eventDate should contain date and time
+    // location?: string; // venue should cover this
+    // image?: string; // You might add a column for this if you store image URLs
+    // category?: string; // You might add a column for this
+    // rating?: number;
+    // attendees?: number;
+}
 
 const Index = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+    const [events, setEvents] = useState<Event[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
-  const featuredEvents = [
-    {
-      id: 1,
-      title: "Nyashinski Live in Concert",
-      artist: "Nyashinski",
-      date: "2024-07-15",
-      time: "20:00",
-      venue: "KICC Grounds",
-      location: "Nairobi, Kenya",
-      price: 2500,
-      image: "/placeholder.svg",
-      category: "concert",
-      rating: 4.9,
-      attendees: 8000
-    },
-    {
-      id: 2,
-      title: "Koroga Festival 2024",
-      artist: "Various Artists",
-      date: "2024-06-22",
-      time: "14:00",
-      venue: "Carnivore Grounds",
-      location: "Nairobi, Kenya",
-      price: 3500,
-      image: "/placeholder.svg",
-      category: "festival",
-      rating: 4.8,
-      attendees: 15000
-    },
-    {
-      id: 3,
-      title: "Sauti Sol Farewell Tour",
-      artist: "Sauti Sol",
-      date: "2024-08-10",
-      time: "19:00",
-      venue: "Uhuru Gardens",
-      location: "Nairobi, Kenya",
-      price: 4000,
-      image: "/placeholder.svg",
-      category: "concert",
-      rating: 4.9,
-      attendees: 12000
-    },
-    {
-      id: 4,
-      title: "Blankets & Wine",
-      artist: "Various Artists",
-      date: "2024-06-30",
-      time: "15:00",
-      venue: "Ngong Racecourse",
-      location: "Nairobi, Kenya",
-      price: 2000,
-      image: "/placeholder.svg",
-      category: "festival",
-      rating: 4.7,
-      attendees: 5000
-    },
-    {
-      id: 5,
-      title: "Diamond Platnumz Live",
-      artist: "Diamond Platnumz",
-      date: "2024-07-05",
-      time: "20:30",
-      venue: "Kasarani Stadium",
-      location: "Nairobi, Kenya",
-      price: 3000,
-      image: "/placeholder.svg",
-      category: "concert",
-      rating: 4.8,
-      attendees: 25000
-    },
-    {
-      id: 6,
-      title: "Amapiano Night",
-      artist: "DJ Maphorisa & Kabza De Small",
-      date: "2024-06-25",
-      time: "21:00",
-      venue: "Alchemist Bar",
-      location: "Nairobi, Kenya",
-      price: 1500,
-      image: "/placeholder.svg",
-      category: "concert",
-      rating: 4.6,
-      attendees: 800
+    // --- State for filters, matching EventList.tsx example ---
+    const [selectedCategory, setSelectedCategory] = useState<string>("all");
+    const [selectedDate, setSelectedDate] = useState<string>("any-date");
+    const [selectedLocation, setSelectedLocation] = useState<string>("any-location");
+    const [selectedPrice, setSelectedPrice] = useState<string>("any-price");
+
+    const { toast } = useToast();
+
+    // --- Data Fetching Effect ---
+    useEffect(() => {
+        const fetchEvents = async () => {
+            try {
+                // Adjust to your backend API endpoint for events
+                const response = await fetch('http://localhost:5000/api/events');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data: Event[] = await response.json();
+                setEvents(data);
+            } catch (e: any) {
+                setError(e.message);
+                toast({
+                    title: "Error fetching events",
+                    description: e.message,
+                    variant: "destructive",
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchEvents();
+    }, [toast]); // `toast` is stable, so adding it here is fine.
+
+    // --- Filter Logic ---
+    const filteredEvents = events.filter((event) => {
+        // Basic search by name/venue (adjust if you add artist, etc. back to DB)
+        const matchesSearch =
+            event.name.toLowerCase().includes(searchQuery.toLowerCase()) || // Use event.name
+            event.venue.toLowerCase().includes(searchQuery.toLowerCase());
+
+        // --- Date Filtering (Replicated from EventList.tsx example) ---
+        const today = new Date();
+        let matchesDate = true;
+        if (selectedDate === "today") {
+            const eventDate = new Date(event.eventDate);
+            matchesDate = (
+                eventDate.getDate() === today.getDate() &&
+                eventDate.getMonth() === today.getMonth() &&
+                eventDate.getFullYear() === today.getFullYear()
+            );
+        } else if (selectedDate === "tomorrow") {
+            const tomorrow = new Date();
+            tomorrow.setDate(today.getDate() + 1);
+            const eventDate = new Date(event.eventDate);
+            matchesDate = (
+                eventDate.getDate() === tomorrow.getDate() &&
+                eventDate.getMonth() === tomorrow.getMonth() &&
+                eventDate.getFullYear() === tomorrow.getFullYear()
+            );
+        } else if (selectedDate === "this-week") {
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay());
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            const eventDate = new Date(event.eventDate);
+            matchesDate = eventDate >= startOfWeek && eventDate <= endOfWeek;
+        } else if (selectedDate === "this-month") {
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            const eventDate = new Date(event.eventDate);
+            matchesDate = (
+                eventDate.getMonth() === currentMonth &&
+                eventDate.getFullYear() === currentYear
+            );
+        }
+
+        // --- Price Filtering (Replicated from EventList.tsx example) ---
+        let matchesPrice = true;
+        if (selectedPrice === "under-20") {
+            matchesPrice = event.ticketPrice < 20;
+        } else if (selectedPrice === "20-40") {
+            matchesPrice = event.ticketPrice >= 20 && event.ticketPrice <= 40;
+        } else if (selectedPrice === "40-80") {
+            matchesPrice = event.ticketPrice > 40 && event.ticketPrice <= 80;
+        } else if (selectedPrice === "over-80") {
+            matchesPrice = event.ticketPrice > 80;
+        }
+
+        // --- Category Filtering (Only if you add 'category' to your Event DB table) ---
+        // For now, assuming you don't have a 'category' column in the DB, this will always be true or needs to be removed.
+        // If you add category, uncomment and adjust `event.category` to match.
+        // const matchesCategory = selectedCategory === "all" || event.category.toLowerCase() === selectedCategory.toLowerCase();
+        const matchesCategory = true; // Placeholder if no category field in DB
+
+        // If you were to add location filtering back based on a DB column:
+        // const matchesLocation = selectedLocation === "any-location" || event.location.toLowerCase() === selectedLocation.toLowerCase();
+
+        return matchesSearch && matchesCategory && matchesDate && matchesPrice;
+    });
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <p>Loading events...</p>
+            </div>
+        );
     }
-  ];
 
-  const stats = [
-    { icon: Music, label: "Events", value: "500+" },
-    { icon: Users, label: "Happy Customers", value: "50K+" },
-    { icon: Star, label: "Average Rating", value: "4.8" },
-    { icon: MapPin, label: "Cities", value: "10+" }
-  ];
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Music className="h-8 w-8 text-green-600" />
-              <h1 className="text-2xl font-bold text-gray-900">EventBooker Kenya</h1>
+    if (error) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <p className="text-red-500">Error: {error}</p>
             </div>
-            <nav className="hidden md:flex items-center space-x-6">
-              <a href="#" className="text-gray-600 hover:text-green-600 transition-colors">Events</a>
-              <a href="#" className="text-gray-600 hover:text-green-600 transition-colors">Venues</a>
-              <a href="#" className="text-gray-600 hover:text-green-600 transition-colors">My Bookings</a>
-              <Button variant="outline">Sign In</Button>
-              <Button className="bg-green-600 hover:bg-green-700">Sign Up</Button>
-            </nav>
-          </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-50 font-sans">
+            {/* Header */}
+            <header className="sticky top-0 z-40 w-full bg-white shadow-sm">
+                <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+                    <Link to="/" className="flex items-center text-2xl font-bold text-green-700">
+                        {/* Ensure this path is correct if you have a logo */}
+                        <img src="/placeholder.svg" alt="EventBooker Kenya Logo" className="h-8 w-8 mr-2" />
+                        EventBooker Kenya
+                    </Link>
+                    <nav className="hidden md:flex items-center space-x-6">
+                        <Link to="/events" className="text-gray-600 hover:text-green-700 transition-colors">Events</Link>
+                        <Link to="/venues" className="text-gray-600 hover:text-green-700 transition-colors">Venues</Link>
+                        <Link to="/my-bookings" className="text-gray-600 hover:text-green-700 transition-colors">My Bookings</Link>
+                        <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">Sign In</Button>
+                        <Button className="bg-green-600 hover:bg-green-700">Sign Up</Button>
+                    </nav>
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <Button variant="ghost" size="icon" className="md:hidden">
+                                <Menu className="h-6 w-6" />
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="right">
+                            <nav className="flex flex-col gap-4 py-6">
+                                <Link to="/events" className="text-gray-600 hover:text-green-700 transition-colors">Events</Link>
+                                <Link to="/venues" className="text-gray-600 hover:text-green-700 transition-colors">Venues</Link>
+                                <Link to="/my-bookings" className="text-gray-600 hover:text-green-700 transition-colors">My Bookings</Link>
+                                <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full">Sign In</Button>
+                                <Button className="bg-green-600 hover:bg-green-700 w-full">Sign Up</Button>
+                            </nav>
+                        </SheetContent>
+                    </Sheet>
+                </div>
+            </header>
+
+            {/* Hero Section */}
+            <section className="relative bg-gradient-to-r from-green-50 to-green-100 py-20 text-center">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-4">
+                        Discover Amazing <span className="text-green-700">Events & Concerts</span> in Kenya
+                    </h1>
+                    <p className="text-lg text-gray-700 max-w-2xl mx-auto mb-8">
+                        Book tickets for the best concerts, festivals, and events across Kenya. From intimate venues to massive festivals in Nairobi, Mombasa, Kisumu and more.
+                    </p>
+                    <div className="max-w-xl mx-auto flex items-center bg-white rounded-full shadow-lg p-1">
+                        <Search className="h-5 w-5 text-gray-400 ml-4" />
+                        <Input
+                            type="text"
+                            placeholder="Search events, artists, venues..."
+                            className="flex-1 border-none focus-visible:ring-0 focus-visible:ring-offset-0 px-4"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        <Button className="bg-green-600 hover:bg-green-700 rounded-full px-6 py-2">
+                            Search
+                        </Button>
+                    </div>
+                </div>
+            </section>
+
+            {/* Main Content */}
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <section className="mb-8">
+                    {/* Ensure SearchFilters component can handle these props */}
+                    <SearchFilters
+                        selectedCategory={selectedCategory}
+                        onCategoryChange={setSelectedCategory}
+                        // Add these if your SearchFilters component uses them
+                        selectedDate={selectedDate}
+                        onDateChange={setSelectedDate}
+                        selectedLocation={selectedLocation}
+                        onLocationChange={setSelectedLocation}
+                        selectedPrice={selectedPrice}
+                        onPriceChange={setSelectedPrice}
+                    />
+                </section>
+
+                <section>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-6">Upcoming Events</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {/* --- IMPORTANT: Use eventId from the database for the key --- */}
+                        {filteredEvents.map((event) => (
+                            <EventCard key={event.eventId} event={event} />
+                        ))}
+                    </div>
+                    {filteredEvents.length === 0 && (
+                        <p className="text-center text-gray-600 text-lg py-10">No events found matching your criteria.</p>
+                    )}
+                </section>
+            </main>
+
+            {/* Footer */}
+            <footer className="bg-gray-800 text-white py-8">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <p>&copy; {new Date().getFullYear()} EventBooker Kenya. All rights reserved.</p>
+                    <div className="flex justify-center space-x-4 mt-4">
+                        <Link to="/privacy" className="text-gray-400 hover:text-white">Privacy Policy</Link>
+                        <Link to="/terms" className="text-gray-400 hover:text-white">Terms of Service</Link>
+                        <Link to="/contact" className="text-gray-400 hover:text-white">Contact Us</Link>
+                    </div>
+                </div>
+            </footer>
         </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-            Discover Amazing
-            <span className="text-green-600 block">Events & Concerts in Kenya</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Book tickets for the best concerts, festivals, and events across Kenya. 
-            From intimate venues to massive festivals in Nairobi, Mombasa, Kisumu and more.
-          </p>
-          
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto mb-12">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <Input 
-                  placeholder="Search events, artists, venues..." 
-                  className="pl-10 py-3 text-lg"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <Button size="lg" className="px-8 bg-green-600 hover:bg-green-700">
-                <Search className="h-5 w-5 mr-2" />
-                Search
-              </Button>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <stat.icon className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                <div className="text-gray-600">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Search and Filters */}
-      <section className="py-8 px-4 bg-white">
-        <div className="container mx-auto">
-          <SearchFilters 
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-          />
-        </div>
-      </section>
-
-      {/* Featured Events */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Events in Kenya</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Don't miss out on these incredible upcoming events across Kenya
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
-          
-          <div className="text-center mt-12">
-            <Button size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
-              View All Events
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4">
-        <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Music className="h-6 w-6" />
-                <span className="text-xl font-bold">EventBooker Kenya</span>
-              </div>
-              <p className="text-gray-400">
-                Your trusted partner for amazing event experiences across Kenya.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Events</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Concerts</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Festivals</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Sports</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Theatre</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Support</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">M-Pesa Payments</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Safety</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Cities</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Nairobi</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Mombasa</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Kisumu</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Nakuru</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 EventBooker Kenya. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
+    );
 };
 
 export default Index;

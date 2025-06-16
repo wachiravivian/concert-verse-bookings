@@ -1,104 +1,89 @@
-
+// src/components/eventcard.tsx
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, MapPin, Users, Star } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { BookingForm } from "@/components/BookingForm"; // Import the new component
+import { useState } from "react";
+
+
 
 interface Event {
-  id: number;
-  title: string;
-  artist: string;
-  date: string;
-  time: string;
+  eventId: number;
+  name: string;
+  description: string;
+  eventDate: string;
   venue: string;
-  location: string;
-  price: number;
-  image: string;
-  category: string;
-  rating: number;
-  attendees: number;
+  ticketPrice: number; // Even if it's typed as number, runtime can be string from API
 }
 
 interface EventCardProps {
   event: Event;
 }
 
-export const EventCard = ({ event }: EventCardProps) => {
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
+const EventCard: React.FC<EventCardProps> = ({ event }) => {
+  const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
+
+  const handleBookingSuccess = () => {
+    setIsBookingDialogOpen(false); // Close the dialog on successful booking
+    alert('Booking successful! Please check your phone for M-Pesa prompt.');
   };
 
-  const formatAttendees = (count: number) => {
-    if (count >= 1000) {
-      return `${(count / 1000).toFixed(1)}K`;
-    }
-    return count.toString();
-  };
+  const formattedDate = new Date(event.eventDate).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
+  // --- THIS IS THE LINE TO FIX (around line 51) ---
+  const displayPrice = parseFloat(event.ticketPrice as any).toFixed(2);
+  // Or, less explicitly typed:
+  // const displayPrice = (+event.ticketPrice).toFixed(2);
+  // Or simply:
+  // const displayPrice = Number(event.ticketPrice).toFixed(2);
+
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-      <div className="relative">
-        <img 
-          src={event.image} 
-          alt={event.title}
-          className="w-full h-48 object-cover"
-        />
-        <Badge className="absolute top-3 left-3 bg-green-600">
-          {event.category}
-        </Badge>
-        <div className="absolute top-3 right-3 bg-black/50 text-white px-2 py-1 rounded-md text-sm flex items-center">
-          <Star className="h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />
-          {event.rating}
-        </div>
-      </div>
-      
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg line-clamp-1">{event.title}</CardTitle>
-        <CardDescription className="text-green-600 font-medium">
-          {event.artist}
-        </CardDescription>
+    <Card className="flex flex-col h-full">
+      <CardHeader>
+        <CardTitle>{event.name}</CardTitle>
+        <CardDescription>{event.venue}</CardDescription>
       </CardHeader>
-      
-      <CardContent className="space-y-3">
-        <div className="flex items-center text-sm text-gray-600">
-          <Calendar className="h-4 w-4 mr-2" />
-          {formatDate(event.date)} at {event.time}
-        </div>
-        
-        <div className="flex items-center text-sm text-gray-600">
-          <MapPin className="h-4 w-4 mr-2" />
-          {event.venue}, {event.location}
-        </div>
-        
-        <div className="flex items-center text-sm text-gray-600">
-          <Users className="h-4 w-4 mr-2" />
-          {formatAttendees(event.attendees)} attending
-        </div>
-        
-        <div className="flex items-center justify-between pt-4">
-          <div>
-            <span className="text-2xl font-bold text-gray-900">{formatPrice(event.price)}</span>
-            <span className="text-gray-600 ml-1">per ticket</span>
-          </div>
-          <Button className="bg-green-600 hover:bg-green-700">
-            Book Now
-          </Button>
-        </div>
+      <CardContent className="flex-grow">
+        <p className="text-sm text-gray-700 mb-2">{event.description}</p>
+        <p className="text-md font-medium text-gray-800">Date: {formattedDate}</p>
+        {/* Update this line to use displayPrice */}
+        <p className="text-lg font-bold text-blue-600">Ksh {displayPrice}</p>
       </CardContent>
+      <CardFooter>
+        <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="w-full bg-green-600 hover:bg-green-700">
+              Book Now
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Book Tickets for {event.name}</DialogTitle>
+              <DialogDescription>
+                Enter your details to confirm your booking.
+              </DialogDescription>
+            </DialogHeader>
+            <BookingForm
+              eventId={event.eventId}
+              eventName={event.name}
+              eventTicketPrice={parseFloat(event.ticketPrice as any)} // <--- ALSO FIX THIS IN BOOKINGFORM PROP
+              onBookingSuccess={handleBookingSuccess}
+              onClose={() => setIsBookingDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      </CardFooter>
     </Card>
   );
 };
+
+export default EventCard;
