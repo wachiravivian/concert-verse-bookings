@@ -1,7 +1,6 @@
-# Welcome to your  project
+# Welcome to your project
 
 ## Project info
-
 
 
 

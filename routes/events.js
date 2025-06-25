@@ -1,25 +1,20 @@
-// server/routes/events.js (example)
-const express = require('express');
-const mysql = require('mysql2/promise'); // Assuming you use the same pool
+// At the top (after db connection)
+import express from 'express';
+import mysql from 'mysql2';
 const router = express.Router();
 
-// Database connection pool (should be defined/imported correctly)
-const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+// ... your db connection setup ...
+
+// ✅ Booking route
+router.post('/bookings', (req, res) => {
+  const { event_id, full_name, mobile, email, tickets, total_price } = req.body;
+
+  console.log('Received booking:', req.body);
+
+  res.status(200).json({
+    message: 'Booking successful',
+    booking: { event_id, full_name, tickets, total_price },
+  });
 });
 
-router.get('/', async (req, res) => {
-    try {
-        // This is the query that fetches events for your landing page
-        const [rows] = await pool.query('SELECT eventId, name, description, eventDate, venue, ticketPrice FROM Event');
-        res.json(rows);
-    } catch (error) {
-        console.error('Error fetching events:', error);
-        res.status(500).json({ message: 'Failed to fetch events.', error: error.message });
-    }
-});
-
-module.exports = router;
+export default router;
